@@ -5,6 +5,21 @@
 ## TODO
 - The docker image is 2GB without pre-downloaded models. Its 3.76GB with pre-downloaded models!! Too big, someone please help me to reduce the size.
 
+## Configuration
+Customize through environment variables. **GLOBAL_TOOL_PROMPT** is **IMPORTANT**!
+
+- `OPENAPI_JSON_DOCS_URL`: URL to the OpenAPI specification JSON (defaults to https://api.staging.readymojo.com/openapi.json)
+- `MCP_API_PREFIX`: Customizable tool namespace (default "any_openapi"):
+  ```bash
+  # Creates tools: custom_api_request_schema and custom_make_request
+  docker run -e MCP_API_PREFIX=finance ...
+  ```
+- `GLOBAL_TOOL_PROMPT`: Optional text to prepend to all tool descriptions. This is crucial to make the Claude select and not select your tool accurately.
+  ```bash
+  # Adds "Access to insights apis for ACME Financial Services abc.com . " to the beginning of all tool descriptions
+  docker run -e GLOBAL_TOOL_PROMPT="Access to insights apis for ACME Financial Services abc.com ." ...
+  ```
+
 ## TL'DR
 **Why I create this**: I want to serve my private API, whose swagger openapi docs is a few hundreds KB in size.
 - Claude MCP simply error on processing these size of file
@@ -58,6 +73,8 @@ Here is the multi-instance config example. I design it so it can more flexibly u
         "OPENAPI_JSON_DOCS_URL=https://api.finance.com/openapi.json",
         "-e",
         "MCP_API_PREFIX=finance",
+        "-e",
+        "GLOBAL_TOOL_PROMPT='Access to insights apis for ACME Financial Services abc.com .'",
         "buryhuang/mcp-server-any-openapi:latest"
       ]
     },
@@ -71,6 +88,8 @@ Here is the multi-instance config example. I design it so it can more flexibly u
         "OPENAPI_JSON_DOCS_URL=https://api.healthcare.com/openapi.json",
         "-e",
         "MCP_API_PREFIX=healthcare",
+        "-e",
+        "GLOBAL_TOOL_PROMPT='Access to insights apis for Healthcare API services efg.com .",
         "buryhuang/mcp-server-any-openapi:latest"
       ]
     }
@@ -98,6 +117,8 @@ In this example:
         "API_REQUEST_BASE_URL=https://api.finance.staging.com",
         "-e",
         "MCP_API_PREFIX=finance",
+        "-e",
+        "GLOBAL_TOOL_PROMPT='Access to insights apis for ACME Financial Services abc.com .'",
         "buryhuang/mcp-server-any-openapi:latest"
       ]
     }
@@ -137,16 +158,6 @@ npx -y @smithery/cli install @baryhuang/mcp-server-any-openapi --client claude
 pip install mcp-server-any-openapi
 ```
 
-## Configuration
-
-Customize through environment variables:
-
-- `OPENAPI_JSON_DOCS_URL`: URL to the OpenAPI specification JSON (defaults to https://api.staging.readymojo.com/openapi.json)
-- `MCP_API_PREFIX`: Customizable tool namespace (default "any_openapi"):
-  ```bash
-  # Creates tools: custom_api_request_schema and custom_make_request
-  docker run -e MCP_API_PREFIX=finance ...
-  ```
 
 ## Available Tools
 
@@ -296,6 +307,8 @@ Configure the MCP server in your Claude Desktop settings:
         "OPENAPI_JSON_DOCS_URL=https://api.example.com/openapi.json",
         "-e",
         "MCP_API_PREFIX=finance",
+        "-e",
+        "GLOBAL_TOOL_PROMPT='Access to insights apis for ACME Financial Services abc.com .",
         "buryhuang/mcp-server-any-openapi:latest"
       ]
     }
