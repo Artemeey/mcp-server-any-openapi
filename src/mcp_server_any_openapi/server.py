@@ -220,6 +220,11 @@ async def main():
     api_prefix = os.getenv('MCP_API_PREFIX', 'any_openapi')
     server = Server(api_prefix)
     endpoint_searcher = EndpointSearcher()
+    
+    # Get global tool prompt from environment variable
+    global_tool_prompt = os.getenv('GLOBAL_TOOL_PROMPT', '')
+    if global_tool_prompt and not global_tool_prompt.endswith(' '):
+        global_tool_prompt += ' '  # Add space if not already present
 
     @server.list_tools()
     async def handle_list_tools() -> list[types.Tool]:
@@ -227,7 +232,7 @@ async def main():
         return [
             types.Tool(
                 name=f"{api_prefix}_api_request_schema",
-                description="Get API endpoint schemas that match your intent. Returns endpoint details including path, method, parameters, and response formats.",
+                description=f"{global_tool_prompt} Get API endpoint schemas that match your intent. Returns endpoint details including path, method, parameters, and response formats.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -241,7 +246,7 @@ async def main():
             ),
             types.Tool(
                 name=f"{api_prefix}_make_request",
-                description="Make an actual REST API request with full control over method, headers, body, and parameters.",
+                description=f"{global_tool_prompt} Make an actual REST API request with full control over method, headers, body, and parameters.",
                 inputSchema={
                     "type": "object",
                     "properties": {
