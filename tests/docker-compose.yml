@@ -1,6 +1,8 @@
 # test stdin: http://localhost:6274/?transport=stdio&serverCommand=docker&serverArgs=run%20-i%20--rm%20-e%20OPENAPI_JSON_DOCS_URL%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Ftopvisor%2Ftopvisor-openapi%2Fmain%2Fsrc%2Fjson%2FTopvisor.json%20-e%20MCP_API_PREFIX%3Dtopvisor%20-e%20API_REQUEST_BASE_URL%3Dhttps%3A%2F%2Fapi.topvisor.com%2Fv2%20mcp-server-any-openapi%3Alocal
 # test http (sse): http://localhost:6274/?transport=sse&serverUrl=http%3A%2F%2Flocalhost%3A8000%2Fsse
 
+name: mcp-server-any-openapi:local
+
 services:
   topvisor-mcp:
     build:
