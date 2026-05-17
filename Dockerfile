@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 # --------
 # Builder stage
 # --------
@@ -6,11 +8,12 @@ FROM python:3.11-slim AS builder
 # Set working directory for builder
 WORKDIR /app
 
-# Copy the entire project first
-COPY . /app/
+# Copy only dependency manifest
+COPY requirements.txt /app/requirements.txt
 
 # Upgrade pip and build wheels for all dependencies
-RUN pip install --upgrade pip \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip \
     && mkdir /wheels \
     && pip wheel --wheel-dir=/wheels -r requirements.txt
 
@@ -21,16 +24,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy the entire project
-COPY . /app/
-
 # Copy the wheels built in the builder stage
 COPY --from=builder /wheels /wheels
+COPY requirements.txt /app/requirements.txt
 
 # Install Python dependencies from the local wheel cache
-RUN pip install --upgrade pip \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip \
     && pip install --no-cache-dir --no-index --find-links=/wheels -r requirements.txt \
     && rm -rf /wheels
+
+# Copy the project after dependency install to avoid invalidating dependency layers
+COPY . /app/
 
 # Create models directory
 RUN mkdir -p /app/models
