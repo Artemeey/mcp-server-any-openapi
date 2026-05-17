@@ -1,0 +1,32 @@
+# test: http://localhost:6274/?transport=stdio&serverCommand=docker&serverArgs=run%20-i%20--rm%20-e%20OPENAPI_JSON_DOCS_URL%20-e%20MCP_API_PREFIX%20-e%20API_REQUEST_BASE_URL%20buryhuang/mcp-server-any-openapi:latest
+
+services:
+  topvisor-mcp:
+    image: buryhuang/mcp-server-any-openapi:latest
+    container_name: topvisor-mcp
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    environment:
+      OPENAPI_JSON_DOCS_URL: "https://raw.githubusercontent.com/topvisor/topvisor-openapi/main/src/json/Topvisor.json"
+      MCP_API_PREFIX: "topvisor"
+      API_REQUEST_BASE_URL: "https://api.topvisor.com/v2"
+      GLOBAL_TOOL_PROMPT: "Если в схеме метода есть `responses['200'].content.model`, то считать эту схему `model`, описанием объектов, с которыми работает этот метод. Поля этой модели нужно использовать в следующих параметрах запроса: fields (обязательный), filters, orders"
+
+  mcp-inspector:
+    image: ghcr.io/modelcontextprotocol/inspector:latest
+    container_name: mcp-inspector
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6274:6274"
+      - "127.0.0.1:6277:6277"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "/mnt/wsl/docker-desktop/cli-tools/usr/bin/docker:/usr/local/bin/docker:ro"
+    environment:
+      HOST: "0.0.0.0"
+      MCP_AUTO_OPEN_ENABLED: "false"
+      DANGEROUSLY_OMIT_AUTH: "true"
+      OPENAPI_JSON_DOCS_URL: "https://raw.githubusercontent.com/topvisor/topvisor-openapi/main/src/json/Topvisor.json"
+      MCP_API_PREFIX: "topvisor"
+      API_REQUEST_BASE_URL: "https://api.topvisor.com/v2"
