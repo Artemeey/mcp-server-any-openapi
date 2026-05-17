@@ -1,5 +1,6 @@
 import json
 import logging
+import argparse
 from typing import Any, Dict, List
 import requests
 import numpy as np
@@ -10,6 +11,9 @@ from sentence_transformers import SentenceTransformer
 from fastapi.openapi.utils import get_openapi
 from pydantic import BaseModel, create_model
 from fastapi import FastAPI
+import uvicorn
+from starlette.responses import PlainTextResponse
+from mcp.server.sse import SseServerTransport
 
 from mcp.server import Server
 import mcp.types as types
@@ -213,8 +217,8 @@ class EndpointSearcher:
         return results
 
 
-async def main():
-    """Run the Any OpenAPI Server"""
+def build_server() -> Server:
+    """Build and configure MCP server instance."""
     logger.info("Any OpenAPI Server starting")
     
     # Get API prefix from environment variable with default value
@@ -344,20 +348,108 @@ async def main():
                 "error": str(e)
             }, indent=2))]
 
+    return server
+
+
+def build_init_options(server: Server) -> InitializationOptions:
+    return InitializationOptions(
+        server_name="any_openapi",
+        server_version="0.1.0",
+        capabilities=server.get_capabilities(
+            notification_options=NotificationOptions(),
+            experimental_capabilities={},
+        ),
+    )
+
+
+async def run_stdio(server: Server) -> None:
     async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
         logger.info("Server running with stdio transport")
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="any_openapi",
-                server_version="0.1.0",
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
-            ),
-        )
+        await server.run(read_stream, write_stream, build_init_options(server))
+
+
+def build_http_app(server: Server):
+    sse = SseServerTransport("/messages/")
+    cors_headers = [
+        (b"access-control-allow-origin", b"*"),
+        (b"access-control-allow-methods", b"GET,POST,OPTIONS"),
+        (b"access-control-allow-headers", b"content-type,authorization,mcp-session-id"),
+    ]
+
+    async def app(scope, receive, send):
+        async def send_with_cors(message):
+            if message.get("type") == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.extend(cors_headers)
+                message["headers"] = headers
+            await send(message)
+
+        if scope["type"] == "lifespan":
+            while True:
+                message = await receive()
+                if message["type"] == "lifespan.startup":
+                    await send({"type": "lifespan.startup.complete"})
+                elif message["type"] == "lifespan.shutdown":
+                    await send({"type": "lifespan.shutdown.complete"})
+                    return
+            return
+
+        if scope["type"] != "http":
+            response = PlainTextResponse("Unsupported scope", status_code=404)
+            await response(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        method = scope.get("method", "GET").upper()
+
+        if method == "OPTIONS":
+            response = PlainTextResponse("", status_code=204)
+            await response(scope, receive, send_with_cors)
+            return
+
+        if path == "/sse" and method == "GET":
+            async with sse.connect_sse(scope, receive, send_with_cors) as (read_stream, write_stream):
+                logger.info("SSE client connected")
+                await server.run(read_stream, write_stream, build_init_options(server))
+            return
+
+        if path == "/messages/" and method == "POST":
+            await sse.handle_post_message(scope, receive, send_with_cors)
+            return
+
+        if path == "/health" and method == "GET":
+            response = PlainTextResponse("ok", status_code=200)
+            await response(scope, receive, send_with_cors)
+            return
+
+        response = PlainTextResponse("Not Found", status_code=404)
+        await response(scope, receive, send_with_cors)
+
+    return app
+
+
+async def main():
+    parser = argparse.ArgumentParser(description="Any OpenAPI MCP server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default=os.getenv("MCP_TRANSPORT", "stdio"),
+        help="Transport mode: stdio or http (SSE)",
+    )
+    parser.add_argument("--host", default=os.getenv("MCP_HTTP_HOST", "0.0.0.0"))
+    parser.add_argument("--port", type=int, default=int(os.getenv("MCP_HTTP_PORT", "8000")))
+    args = parser.parse_args()
+
+    server = build_server()
+
+    if args.transport == "http":
+        logger.info("Server running with http transport on %s:%s", args.host, args.port)
+        app = build_http_app(server)
+        config = uvicorn.Config(app=app, host=args.host, port=args.port, log_level="info")
+        await uvicorn.Server(config).serve()
+        return
+
+    await run_stdio(server)
 
 if __name__ == "__main__":
     import asyncio
