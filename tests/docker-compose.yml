@@ -2,7 +2,10 @@
 
 services:
   topvisor-mcp:
-    image: buryhuang/mcp-server-any-openapi:latest
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: mcp-server-any-openapi:local
     container_name: topvisor-mcp
     restart: unless-stopped
     stdin_open: true

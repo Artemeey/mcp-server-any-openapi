@@ -35,14 +35,19 @@ RUN pip install --upgrade pip \
 # Create models directory
 RUN mkdir -p /app/models
 
-# Pre-download models
-RUN python -c "from sentence_transformers import SentenceTransformer; \
-    model = SentenceTransformer('all-MiniLM-L6-v2'); \
-    model.save('/app/models/all-MiniLM-L6-v2')"
+# Default embedding model (can be overridden at build time)
+ARG EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base
+
+# Pre-download embedding model
+RUN python -c "import os; from sentence_transformers import SentenceTransformer; \
+    model_name='${EMBEDDING_MODEL_NAME}'; \
+    model=SentenceTransformer(model_name); \
+    model.save('/app/models/' + model_name.split('/')[-1])"
 
 # Set environment variables
 ENV SENTENCE_TRANSFORMERS_HOME=/app/models
 ENV PYTHONPATH=/app/src
+ENV EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
 
 # Expose port
 EXPOSE 8000

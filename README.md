@@ -14,12 +14,12 @@ Customize through environment variables. **GLOBAL_TOOL_PROMPT** is **IMPORTANT**
   # Creates tools: custom_api_request_schema and custom_make_request
   docker run -e MCP_API_PREFIX=finance ...
   ```
+- `EMBEDDING_MODEL_NAME`: Embedding model used for semantic endpoint search (default `intfloat/multilingual-e5-base`). If not pre-downloaded under `/app/models`, it will be downloaded from Hugging Face on first startup.
 - `GLOBAL_TOOL_PROMPT`: Optional text to prepend to all tool descriptions. This is crucial to make the Claude select and not select your tool accurately.
   ```bash
   # Adds "Access to insights apis for ACME Financial Services abc.com . " to the beginning of all tool descriptions
   docker run -e GLOBAL_TOOL_PROMPT="Access to insights apis for ACME Financial Services abc.com ." ...
   ```
-
 ## TL'DR
 **Why I create this**: I want to serve my private API, whose swagger openapi docs is a few hundreds KB in size.
 - Claude MCP simply error on processing these size of file
@@ -259,6 +259,22 @@ docker pull buryhuang/mcp-server-any-openapi:latest
 
 ```bash
 docker build -t mcp-server-any-openapi .
+```
+
+### Embedding Model Selection (Build Time)
+
+Choose which embedding model is pre-downloaded into the image:
+
+```bash
+# Default
+docker build \
+  --build-arg EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-base \
+  -t mcp-server-any-openapi .
+
+# Alternative
+docker build \
+  --build-arg EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large \
+  -t mcp-server-any-openapi .
 ```
 
 ### Running the Container

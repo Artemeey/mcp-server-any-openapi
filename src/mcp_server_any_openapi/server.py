@@ -29,13 +29,14 @@ def extract_base_url(url: str) -> str:
 class EndpointSearcher:
     def __init__(self):
         # Try to use local model if exists, otherwise download from HuggingFace
-        local_model_path = '/app/models/all-MiniLM-L6-v2'
+        model_name = os.getenv('EMBEDDING_MODEL_NAME', 'intfloat/multilingual-e5-base')
+        local_model_path = f"/app/models/{model_name.split('/')[-1]}"
         if os.path.exists(local_model_path):
             logger.info(f"Using local model from {local_model_path}")
             self.model = SentenceTransformer(local_model_path)
         else:
-            logger.info("Local model not found, downloading from HuggingFace")
-            self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            logger.info(f"Local model not found, downloading from HuggingFace: {model_name}")
+            self.model = SentenceTransformer(model_name)
         
         self.index = None
         self.endpoints = []
