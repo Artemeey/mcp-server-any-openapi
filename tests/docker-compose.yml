@@ -1,4 +1,4 @@
-# test: http://localhost:6274/?transport=stdio&serverCommand=docker&serverArgs=run%20-i%20--rm%20-e%20OPENAPI_JSON_DOCS_URL%20-e%20MCP_API_PREFIX%20-e%20API_REQUEST_BASE_URL%20buryhuang/mcp-server-any-openapi:latest
+# test: http://localhost:6274/?transport=stdio&serverCommand=docker&serverArgs=run%20-i%20--rm%20-e%20OPENAPI_JSON_DOCS_URL%3Dhttps%3A%2F%2Fraw.githubusercontent.com%2Ftopvisor%2Ftopvisor-openapi%2Fmain%2Fsrc%2Fjson%2FTopvisor.json%20-e%20MCP_API_PREFIX%3Dtopvisor%20-e%20API_REQUEST_BASE_URL%3Dhttps%3A%2F%2Fapi.topvisor.com%2Fv2%20mcp-server-any-openapi%3Alocal
 
 services:
   topvisor-mcp:
@@ -14,7 +14,14 @@ services:
       OPENAPI_JSON_DOCS_URL: "https://raw.githubusercontent.com/topvisor/topvisor-openapi/main/src/json/Topvisor.json"
       MCP_API_PREFIX: "topvisor"
       API_REQUEST_BASE_URL: "https://api.topvisor.com/v2"
-      GLOBAL_TOOL_PROMPT: "Если в схеме метода есть `responses['200'].content.model`, то считать эту схему `model`, описанием объектов, с которыми работает этот метод. Поля этой модели нужно использовать в следующих параметрах запроса: fields (обязательный), filters, orders"
+      GLOBAL_TOOL_PROMPT: "Если в схеме метода есть `responses['200'].content.model`, то считать эту схему `model`, описанием объектов, с которыми работает этот метод.
+       Поля этой модели НАДО использовать в следующих параметрах запроса: fields (обязательный), filters, orders.
+       ВСЕГДА указывать fields. Если нужно уточнение спроси у пользователя и предложи наиболее вероятные варианты поелй из модели.
+       ВСЕГДА используй limit=10 (если это не конфликтует с запросом пользователя), если он доступен и указывай фильтры. Если данных много, а фильтр не известен, уточняй у пользователя параметры.
+       ВСЕГДА явно определяй тип операции get/add/edit/del. При поиске метода добавляй ключевое слово с типом операции.
+       ВСЕГДА запрашивай разрешения на операции add/edit/del, если иное не попросит пользователь. Давай отчет о результатах изменения.
+       Некоторые fields требуют указания определителей  через двоеточие в формате: `fieldName:{{ qualifier1 }}:...::{{ qualifierN }}`. Определители перечисляются в порядке их имен по алфавиту. Если имена определителей неизвестны, сообщай об этом пользователю, и проси уточнить документацию OpenAPI.
+       "
 
   mcp-inspector:
     image: ghcr.io/modelcontextprotocol/inspector:latest
